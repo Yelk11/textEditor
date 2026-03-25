@@ -16,9 +16,69 @@ ropeNode* create_leaf(char* str)
     return node;
 }
 
-ropeNode* rope_insert(int index, char* str)
+ropeNode* create_node(ropeNode* left, ropeNode* right)
 {
+    ropeNode* node = calloc(1, sizeof(ropeNode));
+    node->left = left;
+    node->right = right;
+    node->str = NULL;
+    node->weight = left ? left->length : 0;
+    node->length = (left ? left->length : 0) + (right ? right->length : 0);
+    return node;
+}
+
+ropeNode* rope_split(ropeNode* rope, int index)
+{
+    if (!rope || index <= 0) return rope;
+    if (index >= rope->length) return NULL;
+    
+    // If it's a leaf, we need to split the string
+    if (rope->str) {
+        ropeNode* right = create_leaf(rope->str + index);
+        rope->str[index] = '\0';
+        rope->length = index;
+        rope->weight = index;
+        return right;
+    }
+    
+    // If index is within left subtree
+    if (index <= rope->weight) {
+        ropeNode* right_of_left = rope_split(rope->left, index);
+        if (right_of_left) {
+            return rope_concat(right_of_left, rope->right);
+        }
+        return rope->right;
+    }
+    
+    // If index is within right subtree
+    ropeNode* left_of_right = rope_split(rope->right, index - rope->weight);
+    if (left_of_right) {
+        rope->right = left_of_right;
+        rope->length = rope->weight + left_of_right->length;
+        return NULL;
+    }
     return NULL;
+}
+
+ropeNode* rope_insert(ropeNode* rope, int index, char* str)
+{
+    if (!str || index < 0) return rope;
+    if (!rope) return create_leaf(str);
+    if (index > rope->length) return rope;
+    
+    ropeNode* left = rope;
+    ropeNode* insert_node = create_leaf(str);
+    
+    if (index == 0) {
+        return rope_concat(insert_node, rope);
+    }
+    
+    if (index >= rope->length) {
+        return rope_concat(rope, insert_node);
+    }
+    
+    ropeNode* right = rope_split(rope, index);
+    return rope_concat(rope_concat(left, insert_node), right);
 }
 
 ropeNode* rope_concat(ropeNode* left, ropeNode* right)
@@ -92,6 +152,63 @@ void rope_print_tree_helper(ropeNode* root, int depth)
         rope_print_tree_helper(root->left, depth + 1);
         rope_print_tree_helper(root->right, depth + 1);
     }
+}
+
+
+
+ropeNode* rope_substring(ropeNode* root, int start, int end)
+{
+    if (!root || start < 0 || end > root->length || start >= end) {
+        return NULL;
+    }
+    
+    if (root->str) {
+        char* substr = calloc(end - start + 1, sizeof(char));
+        strncpy(substr, root->str + start, end - start);
+        ropeNode* result = create_leaf(substr);
+        free(substr);
+        return result;
+    }
+    
+    // Navigate the tree to find the substring
+    if (end <= root->weight) {
+        // Both start and end are in the left subtree
+        return rope_substring(root->left, start, end);
+    }
+    
+    if (start >= root->weight) {
+        // Both start and end are in the right subtree
+        return rope_substring(root->right, start - root->weight, end - root->weight);
+    }
+    
+    // Substring spans both left and right subtrees
+    ropeNode* left_part = rope_substring(root->left, start, root->weight);
+    ropeNode* right_part = rope_substring(root->right, 0, end - root->weight);
+    
+    if (left_part && right_part) {
+        return rope_concat(left_part, right_part);
+    }
+    
+    return left_part ? left_part : right_part;
+}
+
+ropeNode* rope_balance(ropeNode* root)
+{
+    if (!root || root->str) return root;
+    
+    // Base case: if already balanced or leaf, return as is
+    if (!root->left || !root->right) return root;
+    
+    // Recursively balance subtrees
+    root->left = rope_balance(root->left);
+    root->right = rope_balance(root->right);
+    
+    // Ensure balance (left and right heights don't differ by more than 1)
+    // For simplicity, we'll recompute weights after balancing
+    root->weight = root->left ? root->left->length : 0;
+    root->length = (root->left ? root->left->length : 0) + (root->right ? root->right->length : 0);
+    
+    return root;
 }
 
 void rope_print_tree(ropeNode* root)

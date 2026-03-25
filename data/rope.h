@@ -16,7 +16,7 @@ int rope_length(ropeNode* root);
 
 ropeNode* rope_concat(ropeNode* left, ropeNode* right);
 
-ropeNode* rope_insert(int index, char* str);
+ropeNode* rope_insert(ropeNode* rope, int index, char* str);
 
 ropeNode* rope_balance(ropeNode* root);
 

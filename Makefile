@@ -4,6 +4,7 @@
 CC ?= cc
 INCLUDE_DIRS := $(shell find . -name "*.h" -exec dirname {} \; | sort | uniq)
 CFLAGS ?= -Wall -Wextra -pedantic -std=c99 $(addprefix -I, $(INCLUDE_DIRS))
+LDFLAGS ?= -lncurses
 
 BUILD_DIR := build
 SRC := $(shell find . -name "*.c" -not -path "./$(BUILD_DIR)/*" -not -path "./test/*")
@@ -21,7 +22,7 @@ test: test_runner
 	./test_runner
 
 main: $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 test_runner: build/data/rope.o build/test/test_rope.o build/test/unity.o
 	$(CC) $(CFLAGS) -o $@ $^
